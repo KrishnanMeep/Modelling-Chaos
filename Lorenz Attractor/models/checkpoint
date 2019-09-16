@@ -1,0 +1,2 @@
+model_checkpoint_path: "lorenz_std.ckpt"
+all_model_checkpoint_paths: "lorenz_std.ckpt"
