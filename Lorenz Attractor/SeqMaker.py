@@ -17,10 +17,13 @@ initital_points = np.random.randn(500, 3)
 length = len(initital_points)
 data = []
 
+
 for i in range(100):
 	x, y, z = np.array(initital_points[i])
-	iterations = np.array([initital_points[i]])
 
+	#Pad 9 zero vectors to indicate the beginning of a sequence of 10
+	iterations = np.array([[0,0,0] for _ in range(9)] + [initital_points[i]])
+	
 	for j in range(points_to_be_saved-1):
 		x, y, z = lorenzAtt(x, y, z, sigma, rho, beta)
 		iterations = np.vstack((iterations, [x, y, z]))
@@ -34,7 +37,7 @@ ax.title.set_text(str(initital_points[i]))
 plt.show()
 
 data = np.array(data)
-data = data.reshape(-1, points_to_be_saved*3)
+data = data.reshape(-1, (points_to_be_saved+9)*3)
 print(data.shape)
 df = pd.DataFrame(data)
 df.to_csv('lorenz_std.csv', header = False, index = False)

@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 def load_data(filename, seq_length):
 	data = pd.read_csv(filename, index_col = False).values
 	np.random.shuffle(data)
-	data = data.reshape(-1, 500, 3)
+	data = data.reshape(-1, 509, 3)
 
 	x_train, y_train = [], []
 	for row in data[:int(0.8*len(data))]:
@@ -57,7 +57,7 @@ print(x_train.shape, y_train.shape)
 
 init = tf.global_variables_initializer()
 iterations = len(x_train)//batch_size
-epochs = 100
+epochs = 3000
 reset = False
 saver = tf.train.Saver()
 model_path = "./models/lorenz_std.ckpt"
@@ -70,7 +70,7 @@ with tf.Session() as sess:
 
 	start = time.time()
 	print("Begun")
-	for i in range(epochs):
+	for i in range(1,epochs+1):
 		for j in range(iterations):
 			next_batch = np.random.randint(0, len(x_train), size = batch_size)
 			batch_x = x_train[next_batch]
@@ -79,7 +79,7 @@ with tf.Session() as sess:
 			_, loss = sess.run([trainer, L], feed_dict = { x : batch_x, y : batch_y })
 
 		print("Epoch", i, "L :", loss)
-		if i%10 == 0:
+		if (i-1)%10 == 0:
 			saver.save(sess, model_path)
 
 	print("Done :", timedelta(seconds = time.time() - start))
@@ -87,18 +87,18 @@ with tf.Session() as sess:
 
 	#Testerinos########################################
 	TrainMSE = 0
-	stepsTr = len(x_train)//10
+	stepsTr = int(len(x_train)*0.01)
 
 	for i in range(stepsTr):
 		if i%10 == 0:
 			print("Training points", i, "/", stepsTr)
-		starter = np.array([x_train[i, 0]])							#Shape is 1, 3
-		predicted = np.array([x_train[i, 0]])
+		starter = np.array(x_train[i])							#Shape is 10, 3
+		predicted = np.array(x_train[i])
 
-		for j in range(seq_length*100-1):
+		for j in range(seq_length*100-10):
 			pred = sess.run(D1, feed_dict = {x : [starter]})[0]		#Shape is 3
 
-			if j >= seq_length - 1: 
+			if len(starter) >= seq_length - 1: 
 				starter = np.vstack((starter[1:], pred))
 			else:
 				starter = np.vstack((starter, pred))
@@ -109,18 +109,18 @@ with tf.Session() as sess:
 		TrainMSE += np.square(actuals-predicted).mean()
 
 	TestMSE = 0  
-	stepsTe = len(x_test)//10
+	stepsTe = int(len(x_test)*0.01)
 
 	for i in range(stepsTe):
 		if i%10 == 0:
 			print("Testing points", i, "/", stepsTe)
-		starter = np.array([x_test[i, 0]])
-		predicted = np.array([x_test[i, 0]])
+		starter = np.array(x_test[i])
+		predicted = np.array(x_test[i])
 
-		for j in range(seq_length*100-1):
+		for j in range(seq_length*100-10):
 			pred = sess.run(D1, feed_dict = {x : [starter]})[0]
 
-			if j >= seq_length - 1: 
+			if len(starter) >= seq_length - 1: 
 				starter = np.vstack((starter[1:], pred))
 			else:
 				starter = np.vstack((starter, pred))

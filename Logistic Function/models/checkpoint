@@ -1,2 +1,0 @@
-model_checkpoint_path: "logistic3.9.ckpt"
-all_model_checkpoint_paths: "logistic3.9.ckpt"
