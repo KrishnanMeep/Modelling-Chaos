@@ -5,20 +5,20 @@ import pandas as pd
 def logistic(x, k):
 	return x*(1-x)*k
 
-k = 3.9
-initital_points = np.linspace(0, 0.99, 1000)[1:]
-length = len(initital_points)
-data = []
+k = 3.3
+num_initial_points = 1000
+points_to_be_looked_at = 500
+initital_points = np.linspace(0, 0.99, num_initial_points)[1:]
 
-print("Initial points : ", initital_points)
+data = []
 
 fig, ax = plt.subplots(3, 3, sharex='col', sharey='row')
 
-for i in range(length):
+for i in range(num_initial_points-1):
 	x = initital_points[i]
-	iterations = [0 for _ in range(9)] + [x]
+	iterations = [x]
 
-	for _ in range(500):
+	for _ in range(points_to_be_looked_at):
 		x = logistic(x, k)
 		iterations.append(x)
 	
@@ -31,6 +31,7 @@ for i in range(length):
 #plt.show()
 data = np.array(data)
 print(data.shape)
+print(data[0])
 df = pd.DataFrame(data)
 filename = 'logistic'+str(k)+'.csv'
 df.to_csv(filename, header = False, index = False)

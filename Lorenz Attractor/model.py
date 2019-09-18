@@ -8,31 +8,33 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 def load_data(filename, seq_length):
-	data = pd.read_csv(filename, index_col = False).values
+	data = pd.read_csv(filename, index_col = False)
+	col_length = len(data.columns)
+	data = data.values.reshape(-1, col_length//3, 3)
 	np.random.shuffle(data)
-	data = data.reshape(-1, 509, 3)
 
 	x_train, y_train = [], []
 	for row in data[:int(0.8*len(data))]:
-		for i in range(0, len(row)-seq_length-1, seq_length):
+		for i in range(0, len(row)-seq_length-1):
 			curr = row[i:i+seq_length]
 			x_train.append(curr)
 			y_train.append(row[i+seq_length])
 
+
 	x_test, y_test = [], []
 	for row in data[int(0.8*len(data)):]:
-		for i in range(0, len(row)-seq_length-1, seq_length):
+		for i in range(0, len(row)-seq_length-1):
 			curr = row[i:i+seq_length]
 			x_test.append(curr)
 			y_test.append(row[i+seq_length])
 
-	return np.array(x_train), np.array(y_train), np.array(x_test), np.array(y_test)
+	return np.array(x_train), np.array(y_train), np.array(x_test), np.array(y_test), col_length
 
 
 filename = 'lorenz_std.csv'
 batch_size = 512
 seq_length = 10
-x_train, y_train, x_test, y_test = load_data(filename, seq_length)
+x_train, y_train, x_test, y_test, col_length = load_data(filename, seq_length)
 print(len(x_train), "training sequences")
 print(len(x_test), "test sequences")
 print(x_train.shape)
@@ -57,7 +59,7 @@ print(x_train.shape, y_train.shape)
 
 init = tf.global_variables_initializer()
 iterations = len(x_train)//batch_size
-epochs = 3000
+epochs = 1
 reset = False
 saver = tf.train.Saver()
 model_path = "./models/lorenz_std.ckpt"
@@ -79,7 +81,7 @@ with tf.Session() as sess:
 			_, loss = sess.run([trainer, L], feed_dict = { x : batch_x, y : batch_y })
 
 		print("Epoch", i, "L :", loss)
-		if (i-1)%10 == 0:
+		if i%10 == 0:
 			saver.save(sess, model_path)
 
 	print("Done :", timedelta(seconds = time.time() - start))
@@ -88,50 +90,56 @@ with tf.Session() as sess:
 	#Testerinos########################################
 	TrainMSE = 0
 	stepsTr = int(len(x_train)*0.01)
+	jump = col_length - seq_length - 1
 
-	for i in range(stepsTr):
+	for i in range(0, stepsTr, jump):
 		if i%10 == 0:
-			print("Training points", i, "/", stepsTr)
+			print("Checking training points", i//jump, "/", (stepsTr//jump))
 		starter = np.array(x_train[i])							#Shape is 10, 3
 		predicted = np.array(x_train[i])
-
-		for j in range(seq_length*100-10):
+		for j in range(seq_length-1, jump):
 			pred = sess.run(D1, feed_dict = {x : [starter]})[0]		#Shape is 3
 
-			if len(starter) >= seq_length - 1: 
+			if len(starter) == seq_length: 
 				starter = np.vstack((starter[1:], pred))
 			else:
 				starter = np.vstack((starter, pred))
 
 			predicted = np.vstack((predicted, pred))
 
-		actuals = x_train[i:i+100].reshape(seq_length*100, 3)
+		actuals = np.array(x_train[i])
+		for j in range(seq_length, jump, seq_length):
+			actuals = np.vstack((actuals, x_train[i+j]))
+
 		TrainMSE += np.square(actuals-predicted).mean()
 
 	TestMSE = 0  
 	stepsTe = int(len(x_test)*0.01)
 
-	for i in range(stepsTe):
+	for i in range(0, stepsTe, jump):
 		if i%10 == 0:
-			print("Testing points", i, "/", stepsTe)
+			print("Testing points", i//jump, "/", (stepsTe//jump))
 		starter = np.array(x_test[i])
 		predicted = np.array(x_test[i])
 
-		for j in range(seq_length*100-10):
+		for j in range(seq_length-1, jump):
 			pred = sess.run(D1, feed_dict = {x : [starter]})[0]
 
-			if len(starter) >= seq_length - 1: 
+			if len(starter) == seq_length: 
 				starter = np.vstack((starter[1:], pred))
 			else:
 				starter = np.vstack((starter, pred))
 
 			predicted = np.vstack((predicted, pred))
 
-		actuals = x_test[i:i+100].reshape(seq_length*100, 3)
+		actuals = np.array(x_test[i])
+		for j in range(seq_length, jump, seq_length):
+			actuals = np.vstack((actuals, x_test[i+j]))
+		
 		TestMSE += np.square(actuals-predicted).mean()
 
-	print("Train MSE Loss :", round(TrainMSE/stepsTr, 4))  		
-	print("Test MSE Loss :", round(TestMSE/stepsTe, 4))
+	print("Train MSE Loss :", round(TrainMSE/(stepsTr/jump), 4))  		
+	print("Test MSE Loss :", round(TestMSE/(stepsTe/jump), 4))
 
 	plt.rcParams["figure.figsize"] = (8,5)
 
